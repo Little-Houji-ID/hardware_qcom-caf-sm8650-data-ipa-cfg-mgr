@@ -25,6 +25,12 @@ BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
 WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
 OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+Changes from Qualcomm Innovation Center, Inc. are provided under the following license:
+
+Copyright (c) 2025 Qualcomm Innovation Center, Inc. All rights reserved.
+
+SPDX-License-Identifier: BSD-3-Clause-Clear
 */
 /*
  * ​​​​​Changes from Qualcomm Innovation Center are provided under the following license:
@@ -365,6 +371,22 @@ int IPACM_ConntrackClient::IPA_Conntrack_TCP_Filter_Init(void)
 	nfct_filter_add_attr(pClient->tcp_filter,
 											 NFCT_FILTER_L4PROTO_STATE,
 											 &tcp_proto_state);
+
+	tcp_proto_state.proto = IPPROTO_TCP;
+	tcp_proto_state.state = TCP_CONNTRACK_CLOSE;
+	ret = nfct_filter_set_logic(pClient->tcp_filter,
+															NFCT_FILTER_L4PROTO_STATE,
+															NFCT_FILTER_LOGIC_POSITIVE);
+	if(ret == -1)
+	{
+		IPACMERR("unable to set filter logic\n");
+		return -1;
+	}
+
+	nfct_filter_add_attr(pClient->tcp_filter,
+											 NFCT_FILTER_L4PROTO_STATE,
+											 &tcp_proto_state);
+
 	return 0;
 }
 
@@ -492,7 +514,7 @@ void* IPACM_ConntrackClient::TCPRegisterWithConnTrack(void *)
 
 ctcatch:
 	ret = nfct_catch(pClient->tcp_hdl);
-	if((ret == -1) && (errno != ENOMSG))
+	if((ret == -1) && (errno != ENOMSG) && (errno != ENOBUFS))
 	{
 		IPACMERR("(%d)(%d)(%s)\n", ret, errno, strerror(errno));
 		return NULL;
@@ -583,7 +605,7 @@ void* IPACM_ConntrackClient::UDPRegisterWithConnTrack(void *)
 ctcatch:
 	ret = nfct_catch(pClient->udp_hdl);
 	/* Due to conntrack dump, sequence number might mismatch for initial events. */
-	if((ret == -1) && (errno != ENOMSG) && (errno != EILSEQ))
+	if((ret == -1) && (errno != ENOMSG) && (errno != EILSEQ) && (errno != ENOBUFS))
 	{
 		IPACMDBG("(%d)(%d)(%s)\n", ret, errno, strerror(errno));
 		return NULL;
